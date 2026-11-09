@@ -46,4 +46,17 @@ See `bench_api.py`. Exposes:
 
 - `POST /v1/completions` — text completion with token/rate enforcement
 - `GET  /v1/health` — pool + rate + model status
-- `POST /v1/bench/iq-eq-aq` — run the IQ/EQ/AQ benchmark suite
+- `POST /v1/bench/iq-eq-aq` — run the IQ/EQ/AQ benchmark suite## AGI Benchmark Results (same network)
+
+Model: TinyLlama-1.1B-Chat Q4_K_M via llama-cpp-python, provider `llama-cpp+ensemble`, CPU-only.
+
+| Task | Latency | Result |
+|------|---------|--------|
+| reasoning | 143 s | Partial — verbose, no clean answer |
+| coding | 101 s | Factorial function skeleton, incomplete |
+| planning | 267 s | Plausible debug steps |
+| factual | 3 s | Correct ("The capital of France is Paris.") |
+| math | 14 s | Wrong (12 * 8 = 84, correct is 96) |
+
+**Assessment**: Structured text + code skeletons work; factual recall is reliable;
+arithmetic and multi-step reasoning are not. Not reliable AGI at 1.1B on CPU.
