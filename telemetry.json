@@ -1,0 +1,107 @@
+{
+  "$schema": "https://gotlet.dev/telemetry/v1.json",
+  "service": {
+    "name": "gotlet-telemetry",
+    "language": "python",
+    "interface": ["electron", "vue"],
+    "playback": {
+      "streamer": "playable",
+      "scene": "playable"
+    }
+  },
+  "source": {
+    "ether": {
+      "type": "ethernet",
+      "enabled": true,
+      "interface": "eth0"
+    },
+    "wifi": {
+      "type": "wifi",
+      "enabled": true,
+      "coms": true,
+      "broadcast": true,
+      "host": "127.0.0.1",
+      "port": 5182,
+      "timeout": 2.0
+    },
+    "grid": {
+      "lang": "c",
+      "array": true,
+      "name_tag": true
+    }
+  },
+  "output": {
+    "gray_levels": 4,
+    "result": "gray",
+    "format": "integer_rounded"
+  },
+  "llm_client": {
+    "transport": "tcp",
+    "network": "claude",
+    "tops": true,
+    "vision": {
+      "rounds_of_integers": true
+    },
+    "channels": {
+      "primary": "vivid",
+      "fallback": "vlc",
+      "drv": "drv_channel_node"
+    }
+  },
+  "tasks": {
+    "decomposition": {
+      "lint": true,
+      "inside_model": "thought_functions",
+      "plank": {
+        "first": "oms",
+        "second": "ebjs",
+        "third": "plank"
+      }
+    },
+    "position": {
+      "metrics": "plank_metrics_layout"
+    },
+    "structure": {
+      "decoding": "texture_mat",
+      "light_dark": true
+    },
+    "scrolls": {
+      "frequency": true
+    },
+    "layers": {
+      "dims": true,
+      "characters": true,
+      "output_length": true
+    },
+    "doors": {
+      "awaits": ["phrase", "hash_swap"]
+    }
+  },
+  "benchmark": {
+    "terminal": true,
+    "iq": { "by": "occurrence" },
+    "eq": { "by": "occurrence" },
+    "aq": { "by": "occurrence" },
+    "response_time": true,
+    "coms_result": true
+  },
+  "coms": {
+    "wifi": {
+      "enabled": true,
+      "transport": "udp",
+      "broadcast": true,
+      "host": "127.0.0.1",
+      "port": 5182,
+      "timeout": 2.0,
+      "framing": "4-byte-be-len-prefix + json"
+    }
+  },
+  "triggers": {
+    "agent": {
+      "cmnt": true,
+      "on": "puzzle",
+      "record_events": true
+    },
+    "categories": true
+  }
+}

@@ -1,0 +1,6 @@
+.venv/
+activity/QBM-/
+activity/ZEN/
+activity/feed.log
+*.pyc
+__pycache__/

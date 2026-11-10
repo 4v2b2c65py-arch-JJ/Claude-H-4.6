@@ -24,6 +24,9 @@ from pathlib import Path
 from collections import defaultdict, deque
 from typing import Any
 
+# ---- HTTP server (OpenAI-compatible) so ZEN can use this as an LLM provider ----
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
 # Force all model files onto the F drive (C has limited space).
 QBM = Path(r"F:\Gotlet\activity\QBM-")
 PKGS = QBM / "_pkgs"
@@ -160,7 +163,96 @@ class ClaudeHBenchAPI:
 
 
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description="Claude-H-4.6 bench API")
+    parser.add_argument("--serve", action="store_true", help="Run as OpenAI-compatible HTTP server")
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=3334)
+    args = parser.parse_args()
+
     api = ClaudeHBenchAPI()
+
+    if args.serve:
+        class Handler(BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"  # Node fetch requires HTTP/1.1
+
+            def _send(self, code, body):
+                data = json.dumps(body).encode()
+                self.send_response(code)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def do_GET(self):
+                if self.path in ("/v1/health", "/health"):
+                    self._send(200, api.health())
+                elif self.path == "/v1/models":
+                    self._send(200, {
+                        "object": "list",
+                        "data": [{"id": "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf", "object": "model", "owned_by": "gotlet"}],
+                    })
+                else:
+                    self._send(404, {"error": "not found"})
+
+            def do_POST(self):
+                length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(length) if length else b""
+                print(f"[BENCH] POST {self.path} body={body[:200]}", flush=True)
+                try:
+                    payload = json.loads(body) if body else {}
+                except Exception:
+                    payload = {}
+                if self.path in ("/v1/completions", "/v1/chat/completions", "/chat/completions"):
+                    user = payload.get("user", "anonymous")
+                    prompt = (payload.get("prompt") or
+                              "".join(m.get("content", "") for m in payload.get("messages", [])))
+                    r = api.complete(user, prompt, max_tokens=payload.get("max_tokens", 1024))
+                    if "error" in r:
+                        self._send(429, {"error": {"message": r["error"], "type": "rate_limit_error"}})
+                    else:
+                        self._send(200, {
+                            "id": f"chatcmpl-{int(time.time())}",
+                            "object": "chat.completion",
+                            "model": r.get("model", "tinyllama"),
+                            "choices": [{
+                                "index": 0,
+                                "message": {"role": "assistant", "content": r.get("response", "")},
+                                "finish_reason": "stop",
+                            }],
+                            "usage": {
+                                "prompt_tokens": r.get("tokens_used", 0),
+                                "completion_tokens": r.get("tokens_used", 0),
+                                "total_tokens": r.get("tokens_used", 0),
+                            },
+                        })
+                elif self.path in ("/v1/embeddings", "/embeddings"):
+                    text = payload.get("input", "")
+                    vec = [float(ord(c) % 256) / 256.0 for c in text[:512]]
+                    self._send(200, {
+                        "object": "list",
+                        "data": [{"object": "embedding", "embedding": vec, "index": 0}],
+                        "model": "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+                    })
+                elif self.path == "/v1/bench/iq-eq-aq":
+                    self._send(200, api.bench_iq_eq_aq(payload.get("user", "probe")))
+                else:
+                    self._send(404, {"error": "not found"})
+
+            def log_message(self, fmt, *args):
+                pass  # silence request logging
+
+        server = HTTPServer((args.host, args.port), Handler)
+        print(f"Claude-H-4.6 bench API serving on http://{args.host}:{args.port}")
+        print(f"  GET  /v1/health  - pool + rate + model status")
+        print(f"  POST /v1/completions - OpenAI-compatible chat completions")
+        print(f"  POST /v1/bench/iq-eq-aq - IQ/EQ/AQ benchmark suite")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        return 0
+
     print(json.dumps(api.health(), indent=2))
     print("\nSample completion:")
     print(json.dumps(api.complete("probe", "What is the capital of France?"), indent=2))
